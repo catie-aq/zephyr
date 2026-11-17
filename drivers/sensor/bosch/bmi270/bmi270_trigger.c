@@ -6,6 +6,7 @@
 
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(bmi270);
 
@@ -77,14 +78,15 @@ static void bmi270_int2_callback(const struct device *dev,
 
 static void bmi270_thread_cb(const struct device *dev)
 {
+	const struct bmi270_config *cfg = dev->config;
 	struct bmi270_data *data = dev->data;
 	int ret;
 
-	/* INT1: FIFO by default, feature (motion) interrupts when using INT2 for FIFO */
+	/* INT1: FIFO by default, feature (motion) interrupts when using INT2 for FIFO,
+	 * data ready when INT2 is not connected
+	 */
 	if (atomic_test_and_clear_bit(&data->int_flags, INT_FLAGS_INT1)) {
 #if defined(CONFIG_BMI270_STREAM) && !defined(CONFIG_BMI270_FIFO_ON_INT2)
-		const struct bmi270_config *cfg = dev->config;
-
 		if (bmi270_try_submit_fifo_irq(dev, bmi270_fifo_irq_pin(cfg), "INT1")) {
 			return;
 		}
@@ -98,11 +100,21 @@ static void bmi270_thread_cb(const struct device *dev)
 			return;
 		}
 
+		int_status = sys_le16_to_cpu(int_status);
+
 		k_mutex_lock(&data->trigger_mutex, K_FOREVER);
 
 		if (data->motion_handler != NULL) {
 			if (int_status & BMI270_INT_STATUS_ANY_MOTION) {
 				data->motion_handler(dev, data->motion_trigger);
+			}
+		}
+
+		/* INT_STATUS_1 is the high byte */
+		if (data->drdy_handler != NULL && !cfg->int2.port) {
+			if ((int_status >> 8) & (BMI270_INT_STATUS_1_ACC_DRDY_INT |
+						 BMI270_INT_STATUS_1_GYR_DRDY_INT)) {
+				data->drdy_handler(dev, data->drdy_trigger);
 			}
 		}
 
@@ -112,8 +124,6 @@ static void bmi270_thread_cb(const struct device *dev)
 	/* INT2: FIFO when CONFIG_BMI270_FIFO_ON_INT2, else data ready only */
 	if (atomic_test_and_clear_bit(&data->int_flags, INT_FLAGS_INT2)) {
 #if defined(CONFIG_BMI270_STREAM) && defined(CONFIG_BMI270_FIFO_ON_INT2)
-		const struct bmi270_config *cfg = dev->config;
-
 		if (bmi270_try_submit_fifo_irq(dev, bmi270_fifo_irq_pin(cfg), "INT2")) {
 			return;
 		}
@@ -256,7 +266,7 @@ int bmi270_init_interrupts(const struct device *dev)
 	ret = bmi270_init_int_pin(&cfg->int2, &data->int2_cb,
 				  bmi270_int2_callback);
 	if (ret) {
-		LOG_ERR("Failed to initialize INT2 (required for FIFO and data ready)");
+		LOG_ERR("Failed to initialize INT2");
 		return -EINVAL;
 	}
 
@@ -348,11 +358,14 @@ static int bmi270_anymo_config(const struct device *dev, bool enable)
 
 static int bmi270_drdy_config(const struct device *dev, bool enable)
 {
+	const struct bmi270_config *cfg = dev->config;
 	int ret;
 	uint8_t int_map_data = 0;
 
+	/* Data ready goes to INT2, or to INT1 when INT2 is not connected */
 	if (enable) {
-		int_map_data |= BMI270_INT_MAP_DATA_DRDY_INT2;
+		int_map_data |= cfg->int2.port ? BMI270_INT_MAP_DATA_DRDY_INT2
+					       : BMI270_INT_MAP_DATA_DRDY_INT1;
 	}
 
 	ret = bmi270_reg_write(dev, BMI270_REG_INT_MAP_DATA, &int_map_data, 1);
@@ -384,7 +397,7 @@ int bmi270_trigger_set(const struct device *dev,
 		return bmi270_anymo_config(dev, handler != NULL);
 
 	case SENSOR_TRIG_DATA_READY:
-		if (!cfg->int2.port) {
+		if (!cfg->int1.port && !cfg->int2.port) {
 			return -ENOTSUP;
 		}
 

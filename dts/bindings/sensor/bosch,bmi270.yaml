@@ -14,4 +14,6 @@ properties:
   irq-gpios:
     type: phandle-array
     description: |
-      The INT1 and (optional) INT2 signal connections.
+      The INT1 and (optional) INT2 signal connections. Feature interrupts
+      (any-motion) are routed to INT1. Data ready is routed to INT2, or to
+      INT1 when INT2 is not connected.

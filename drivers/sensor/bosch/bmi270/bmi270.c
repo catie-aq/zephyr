@@ -912,7 +912,8 @@ static const struct bmi270_feature_config bmi270_feature_base = {
  * Two irq-gpios: INT1=first, INT2=second.
  *
  * When FIFO_ON_INT2 is set with a single irq-gpio, INT1 is unavailable
- * and SENSOR_TRIG_MOTION will return -ENOTSUP at runtime.
+ * and SENSOR_TRIG_MOTION will return -ENOTSUP at runtime. Data ready goes
+ * to INT2, or to INT1 when INT2 is not connected.
  */
 #if defined(CONFIG_BMI270_FIFO_ON_INT2)
 #define BMI270_SINGLE_IRQ_INT1(inst)                                                               \
