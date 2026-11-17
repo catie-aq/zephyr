@@ -27,6 +27,13 @@ config BMI270_BUS_SPI
 	default y
 	depends on $(dt_compat_on_bus,$(DT_COMPAT_BOSCH_BMI270),spi)
 
+config BMI270_HAS_INT_GPIOS
+	bool
+	default y
+	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_BOSCH_BMI270),int1-gpios) || \
+		   $(dt_compat_any_has_prop,$(DT_COMPAT_BOSCH_BMI270),int2-gpios) || \
+		   $(dt_compat_any_has_prop,$(DT_COMPAT_BOSCH_BMI270),irq-gpios)
+
 choice BMI270_TRIGGER_MODE
 	prompt "Trigger mode"
 	help
@@ -38,13 +45,13 @@ config BMI270_TRIGGER_NONE
 config BMI270_TRIGGER_GLOBAL_THREAD
 	bool "Use global thread"
 	depends on GPIO
-	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_BOSCH_BMI270),irq-gpios)
+	depends on BMI270_HAS_INT_GPIOS
 	select BMI270_TRIGGER
 
 config BMI270_TRIGGER_OWN_THREAD
 	bool "Use own thread"
 	depends on GPIO
-	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_BOSCH_BMI270),irq-gpios)
+	depends on BMI270_HAS_INT_GPIOS
 	select BMI270_TRIGGER
 
 endchoice
@@ -78,7 +85,7 @@ config BMI270_LOW_POWER_MODE
 config BMI270_STREAM
 	bool "FIFO streaming via sensor_stream()"
 	depends on BMI270_TRIGGER
-	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_BOSCH_BMI270),irq-gpios)
+	depends on BMI270_HAS_INT_GPIOS
 	select SENSOR_ASYNC_API
 	help
 	  Enable FIFO watermark/full streaming using the standard Zephyr
@@ -89,8 +96,9 @@ config BMI270_FIFO_ON_INT2
 	depends on BMI270_STREAM
 	help
 	  By default, FIFO watermark and full interrupts are mapped to INT1
-	  and the single irq-gpios pin is assigned to INT1. Enable this only
-	  if your board routes the FIFO interrupt to the sensor's INT2 pin.
+	  (int1-gpios). Enable this only if your board routes the FIFO
+	  interrupt to the sensor's INT2 pin (int2-gpios). With the deprecated
+	  irq-gpios property, a single entry is then assigned to INT2.
 
 config BMI270_FIFO_POLL_FALLBACK
 	bool "Poll-based FIFO fallback alongside GPIO interrupt"

@@ -908,33 +908,42 @@ static const struct bmi270_feature_config bmi270_feature_base = {
 
 #if CONFIG_BMI270_TRIGGER
 /*
- * One irq-gpio: INT1 by default, INT2 when CONFIG_BMI270_FIFO_ON_INT2.
- * Two irq-gpios: INT1=first, INT2=second.
+ * int1-gpios and int2-gpios, each optional.
  *
- * When FIFO_ON_INT2 is set with a single irq-gpio, INT1 is unavailable
- * and SENSOR_TRIG_MOTION will return -ENOTSUP at runtime. Data ready goes
- * to INT2, or to INT1 when INT2 is not connected.
+ * Deprecated irq-gpios: one entry is INT1 by default, INT2 when
+ * CONFIG_BMI270_FIFO_ON_INT2. Two entries: INT1=first, INT2=second.
+ *
+ * Without INT1, SENSOR_TRIG_MOTION returns -ENOTSUP at runtime. Data ready
+ * goes to INT2, or to INT1 when INT2 is not connected.
  */
 #if defined(CONFIG_BMI270_FIFO_ON_INT2)
 #define BMI270_SINGLE_IRQ_INT1(inst)                                                               \
 	{                                                                                          \
 	}
-#define BMI270_SINGLE_IRQ_INT2(inst) GPIO_DT_SPEC_INST_GET_BY_IDX(inst, irq_gpios, 0)
+#define BMI270_SINGLE_IRQ_INT2(inst) GPIO_DT_SPEC_INST_GET_BY_IDX_OR(inst, irq_gpios, 0, {})
 #else
-#define BMI270_SINGLE_IRQ_INT1(inst) GPIO_DT_SPEC_INST_GET_BY_IDX(inst, irq_gpios, 0)
+#define BMI270_SINGLE_IRQ_INT1(inst) GPIO_DT_SPEC_INST_GET_BY_IDX_OR(inst, irq_gpios, 0, {})
 #define BMI270_SINGLE_IRQ_INT2(inst)                                                               \
 	{                                                                                          \
 	}
 #endif
 
-#define BMI270_CONFIG_INT_1(inst)                                                                  \
+#define BMI270_CONFIG_IRQ_GPIOS_1(inst)                                                            \
 	.int1 = BMI270_SINGLE_IRQ_INT1(inst), .int2 = BMI270_SINGLE_IRQ_INT2(inst),
-#define BMI270_CONFIG_INT_2(inst)                                                                  \
+#define BMI270_CONFIG_IRQ_GPIOS_2(inst)                                                            \
 	.int1 = GPIO_DT_SPEC_INST_GET_BY_IDX(inst, irq_gpios, 0),                                  \
 	.int2 = GPIO_DT_SPEC_INST_GET_BY_IDX(inst, irq_gpios, 1),
-#define BMI270_CONFIG_INT(inst)                                                                    \
+#define BMI270_CONFIG_IRQ_GPIOS(inst)                                                              \
 	COND_CODE_1(DT_INST_PROP_HAS_IDX(inst, irq_gpios, 1),                                      \
-		    (BMI270_CONFIG_INT_2(inst)), (BMI270_CONFIG_INT_1(inst)))
+		    (BMI270_CONFIG_IRQ_GPIOS_2(inst)), (BMI270_CONFIG_IRQ_GPIOS_1(inst)))
+
+#define BMI270_CONFIG_INT_GPIOS(inst)                                                              \
+	.int1 = GPIO_DT_SPEC_INST_GET_OR(inst, int1_gpios, {}),                                    \
+	.int2 = GPIO_DT_SPEC_INST_GET_OR(inst, int2_gpios, {}),
+#define BMI270_CONFIG_INT(inst)                                                                    \
+	COND_CODE_1(UTIL_OR(DT_INST_NODE_HAS_PROP(inst, int1_gpios),                               \
+			    DT_INST_NODE_HAS_PROP(inst, int2_gpios)),                              \
+		    (BMI270_CONFIG_INT_GPIOS(inst)), (BMI270_CONFIG_IRQ_GPIOS(inst)))
 #else
 #define BMI270_CONFIG_INT(inst)
 #endif

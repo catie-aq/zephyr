@@ -336,6 +336,15 @@ PTP Clock
   addend register from its nominal value. All in-tree drivers have been converted.
   (:github:`120828`)
 
+Sensors
+=======
+
+* The ``irq-gpios`` property of :dtcompatible:`bosch,bmi270` is deprecated in favor of
+  ``int1-gpios`` and ``int2-gpios``, one property per sensor interrupt pin. The first
+  ``irq-gpios`` entry becomes ``int1-gpios`` (``int2-gpios`` if
+  :kconfig:option:`CONFIG_BMI270_FIFO_ON_INT2` is enabled with a single entry), the second
+  ``int2-gpios``. ``irq-gpios`` is still accepted.
+
 Timers
 ======
 

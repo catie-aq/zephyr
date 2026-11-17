@@ -11,9 +11,32 @@ include: sensor-device.yaml
 compatible: "bosch,bmi270"
 
 properties:
-  irq-gpios:
+  int1-gpios:
     type: phandle-array
     description: |
-      The INT1 and (optional) INT2 signal connections. Feature interrupts
-      (any-motion) are routed to INT1. Data ready is routed to INT2, or to
-      INT1 when INT2 is not connected.
+      INT1 pin. Feature interrupts (any-motion) and, by default, FIFO
+      interrupts are routed to INT1. Data ready is routed to INT1 when
+      int2-gpios is not set.
+
+      The driver configures INT1 as an active high output. The property
+      value should ensure the flags properly describe the signal that is
+      presented to the driver.
+
+  int2-gpios:
+    type: phandle-array
+    description: |
+      INT2 pin. Data ready is routed to INT2 when set, and FIFO interrupts
+      when CONFIG_BMI270_FIFO_ON_INT2 is enabled.
+
+      The driver configures INT2 as an active high output. The property
+      value should ensure the flags properly describe the signal that is
+      presented to the driver.
+
+  irq-gpios:
+    type: phandle-array
+    deprecated: true
+    description: |
+      Deprecated. Use int1-gpios and int2-gpios instead.
+
+      The INT1 and (optional) INT2 signal connections. A single entry is
+      INT1, or INT2 when CONFIG_BMI270_FIFO_ON_INT2 is enabled.

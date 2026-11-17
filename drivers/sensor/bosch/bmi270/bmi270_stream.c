@@ -769,8 +769,8 @@ void bmi270_submit_stream(const struct device *dev, struct rtio_iodev_sqe *iodev
 	int ret;
 
 	if (!fifo_pin_submit->port) {
-		LOG_ERR("FIFO stream requires %s (irq-gpios)",
-			IS_ENABLED(CONFIG_BMI270_FIFO_ON_INT2) ? "INT2" : "INT1");
+		LOG_ERR("FIFO stream requires %s",
+			IS_ENABLED(CONFIG_BMI270_FIFO_ON_INT2) ? "int2-gpios" : "int1-gpios");
 		rtio_iodev_sqe_err(iodev_sqe, -ENOTSUP);
 		return;
 	}
