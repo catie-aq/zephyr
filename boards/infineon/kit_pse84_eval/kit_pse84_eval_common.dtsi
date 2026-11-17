@@ -83,7 +83,8 @@ i2c0: &scb0 {
 	bosch_bmi270: bmi270@68 {
 		compatible = "bosch,bmi270";
 		reg = <0x68>;
-		irq-gpios = <&gpio_prt7 7 GPIO_ACTIVE_HIGH>, <&gpio_prt6 6 GPIO_ACTIVE_HIGH>;
+		int1-gpios = <&gpio_prt7 7 GPIO_ACTIVE_HIGH>;
+		int2-gpios = <&gpio_prt6 6 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
 };

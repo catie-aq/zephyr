@@ -164,7 +164,7 @@
 		compatible = "bosch,bmi270";
 		reg = <0>;
 		spi-max-frequency = <DT_FREQ_M(8)>;
-		irq-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
+		int1-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
 		status = "disabled";
 	};
 };
